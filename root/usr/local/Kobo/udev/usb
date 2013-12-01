@@ -30,7 +30,6 @@ PARAMS="vendor=$VENDOR_ID product=$PRODUCT_ID vendor_id=Kobo product_id=eReader-
 
 if [ "$ACTION" == "add" ]; then
 	/opt/cfw/scripts/ChangeJournalMode.sh OFF
-	/opt/cfw/scripts/ReplaceFile.sh
 	/mnt/onboard/ext/mount_usb.sh
 	wait
 
@@ -76,6 +75,7 @@ elif [ "$ACTION" == "remove" ]; then
 #		fi
 	fi
 
+	/opt/cfw/scripts/ReplaceFile.sh
 	/opt/cfw/scripts/ChangeJournalMode.sh ON
 
 	rm -rf /etc/images/boot/boot.mng
