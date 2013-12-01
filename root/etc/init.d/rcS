@@ -42,6 +42,8 @@ done
 
 mkfifo /tmp/nickel-hardware-status
 rm -rf /etc/udev/rules.d/70-persistent-net.rules
+rm -rf /mnt/onboard/.kobo
+rm -rf /mnt/onboard/*
 
 echo -e '\000\000\000\000' > /proc/sys/kernel/hotplug
 /sbin/udevd -d
@@ -57,8 +59,6 @@ else
 	tar zxf /etc/udev.tgz -C /
 fi
 
-( usleep 400000; /etc/init.d/on-animator.sh ) &
-
 dosfsck -a -w /dev/mmcblk0p3
 mount -t vfat -o noatime,nodiratime,shortname=mixed,utf8 /dev/mmcblk0p3 /mnt/onboard
 rm -rf /mnt/onboard/fsck*
@@ -70,9 +70,6 @@ echo -n 67108864 > /proc/sys/kernel/shmmax
 
 if [ ! -e /mnt/onboard/.kobo ]; then
 	mkdir -p /mnt/onboard/.kobo
-	tar zxf /usr/local/Kobo/db.tgz -C /mnt/onboard
-	sync
-	echo "Decompressed database"
 fi
 
 if [ -e /mnt/onboard/.kobo/Kobo.tgz ]; then
@@ -82,7 +79,6 @@ if [ -e /mnt/onboard/.kobo/Kobo.tgz ]; then
 fi
                                
 if [ -e /mnt/onboard/.kobo/KoboRoot.tgz ]; then
-	killall on-animator.sh
 	zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
 	/etc/init.d/update-animator.sh &
 	zcat /mnt/onboard/.kobo/KoboRoot.tgz > /dev/null && tar zxf /mnt/onboard/.kobo/KoboRoot.tgz -C /
@@ -98,6 +94,8 @@ if [ -e /mnt/onboard/.kobo/KoboRoot.tgz ]; then
 	sync
 	reboot
 fi
+
+( usleep 400000; /etc/init.d/on-animator.sh ) &
 
 (
 	/usr/local/Kobo/pickel disable.rtc.alarm
@@ -137,4 +135,4 @@ export DBUS_SESSION_BUS_ADDRESS=`/bin/dbus-daemon --session --print-address --fo
 
 /usr/local/Kobo/hindenburg &
 /usr/local/Kobo/nickel -qws -skipFontLoad &
-[ $PLATFORM != freescale ] && udevadm trigger &
+[ $PLATFORM != freescale ] && rm -rf /dev/mmcblk1* && udevadm trigger &
