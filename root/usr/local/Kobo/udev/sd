@@ -34,16 +34,23 @@ DEV="/dev/mmcblk1p1"
 
 if [ "$DEV" == "$DEVNAME" ]; then
 	if [ "$ACTION" == "add" ]; then
+		dosfsck -a -w $DEVNAME
 		mount -r -t vfat -o shortname=mixed $DEVNAME /mnt/sd
 		if [ $? != 0 ]; then
-			mount -r $DEVNAME /mnt/sd
+#			mount -r $DEVNAME /mnt/sd
+#			if [ $? != 0 ]; then
+				echo sd mount fail $DEVNAME >> /tmp/nickel-hardware-status &
+#			else
+#				echo sd $ACTION $DEVNAME >> /tmp/nickel-hardware-status &
+#			fi
+		else
+			echo sd $ACTION $DEVNAME >> /tmp/nickel-hardware-status &
 		fi
 	fi
-
-	echo sd $ACTION $DEVNAME >> /tmp/nickel-hardware-status &
 fi
 
 if [ "$ACTION" == "remove" ]; then
+	echo sd $ACTION $DEVNAME >> /tmp/nickel-hardware-status &
 	umount -l /mnt/sd
 	sync
 fi
