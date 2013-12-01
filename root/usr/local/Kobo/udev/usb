@@ -103,12 +103,12 @@ elif [ "$ACTION" == "remove" ]; then
 			rm -rf /mnt/onboard/.kobo/upgrade
 		fi
 		killall update-animator.sh
-		zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
 
 		if [ -f /mnt/onboard/.images/rebooting.png ]; then
+			zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
 			/opt/cfw/bin/png2raw -K -ta /mnt/onboard/.images/rebooting.png
 		else
-			zcat /etc/images/$PREFIX\reboot.raw.gz | /usr/local/Kobo/pickel showpic
+			zcat /etc/images/$PREFIX\reboot.raw.gz | /usr/local/Kobo/pickel showpic 1
 		fi
 
 		sync
