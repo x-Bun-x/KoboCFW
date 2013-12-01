@@ -60,7 +60,7 @@ fi
 ( usleep 400000; /etc/init.d/on-animator.sh ) &
 
 dosfsck -a -w /dev/mmcblk0p3
-mount -t vfat -o iocharset=utf8 /dev/mmcblk0p3 /mnt/onboard
+mount -t vfat -o noatime,nodiratime,shortname=mixed,utf8 /dev/mmcblk0p3 /mnt/onboard
 rm -rf /mnt/onboard/fsck*
 rm -rf /mnt/onboard/FSCK*
 rm -rf /usr/local/Kobo/db.tgz
