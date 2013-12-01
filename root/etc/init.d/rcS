@@ -45,10 +45,17 @@ rm -rf /etc/udev/rules.d/70-persistent-net.rules
 
 echo -e '\000\000\000\000' > /proc/sys/kernel/hotplug
 /sbin/udevd -d
-/sbin/udevadm control --env=STARTUP=1
-/sbin/udevadm trigger
-/sbin/udevadm settle --timeout=2
-/sbin/udevadm control --env=STARTUP=
+
+if [ $PLATFORM == freescale ] || [ ! -e /etc/udev.tgz ]; then
+	/sbin/udevadm control --env=STARTUP=1
+	/sbin/udevadm trigger
+	/sbin/udevadm settle --timeout=2
+	/sbin/udevadm control --env=STARTUP=
+	[ $PLATFORM != freescale ] && tar cpzf /etc/udev.tgz /dev &
+else
+	zcat /etc/udev.tgz > /dev/null || ( rm -rf /etc/udev.tgz; reboot )
+	tar zxf /etc/udev.tgz -C /
+fi
 
 ( usleep 400000; /etc/init.d/on-animator.sh ) &
 
@@ -59,6 +66,7 @@ rm -rf /mnt/onboard/FSCK*
 rm -rf /usr/local/Kobo/db.tgz
 
 echo -n 8192 > /proc/sys/vm/min_free_kbytes
+echo -n 67108864 > /proc/sys/kernel/shmmax
 
 if [ ! -e /mnt/onboard/.kobo ]; then
 	mkdir -p /mnt/onboard/.kobo
@@ -88,7 +96,7 @@ if [ -e /mnt/onboard/.kobo/KoboRoot.tgz ]; then
 	zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
 
 	if [ -f /mnt/onboard/.images/rebooting.png ]; then
-		/opt/cfw/bin/png2raw-12 -K -ta /mnt/onboard/.images/rebooting.png
+		/opt/cfw/bin/png2raw -K -ta /mnt/onboard/.images/rebooting.png
 	else
 		zcat /etc/images/$PREFIX\reboot.raw.gz | /usr/local/Kobo/pickel showpic
 	fi
@@ -139,14 +147,29 @@ export UBOOT_RECOVERY=/etc/u-boot/$PLATFORM/u-boot.recovery
 /bin/dbus-daemon --system &
 export DBUS_SESSION_BUS_ADDRESS=`/bin/dbus-daemon --session --print-address --fork`
 
-source /etc/init.d/rcSAdd
-
 /usr/local/Kobo/hindenburg &
 
-(LD_PRELOAD="`echo /opt/cfw/preload/*.so`" /usr/local/Kobo/nickel -qws; echo 100 > /sys/class/leds/pmic_ledsr/brightness) &
+source /etc/init.d/rcSAdd
+ADD=
+ADD2=
 
-(
-	if [ -e /dev/mmcblk1p1 ]; then
-		ACTION=add DEVNAME=/dev/mmcblk1p1 /usr/local/Kobo/udev/sd
+if [ ! -e /mnt/onboard/nickel-failed ]; then
+	if [ -e /opt/cfw/preload/experimental/libcb-zoom-hack.so ]; then
+		ADD="`echo /opt/cfw/preload/experimental/libcb-zoom-hack.so`"
+
+		export CFW_HOOK_LIBCB=zoom-center
+		#export CFW_HOOK_LIBCB=zoom-fixed
 	fi
+
+	if [ -e /opt/cfw/preload/experimental/libpasslock.so ]; then
+		ADD2="`echo /opt/cfw/preload/experimental/libpasslock.so`"
+	fi
+fi
+
+# Boot Nickel
+(
+	LD_PRELOAD="`echo /opt/cfw/preload/*.so` $ADD $ADD2" /usr/local/Kobo/nickel -qws -skipFontLoad
+	echo 100 >/sys/class/leds/pmic_ledsr/brightness
 ) &
+
+[ $PLATFORM != freescale ] && udevadm trigger &

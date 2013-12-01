@@ -16,7 +16,7 @@ trap_term_handler() {
 trap trap_term_handler TERM
 
 if [ -f /mnt/onboard/.images/dbrebuild.png ]; then
-	/opt/cfw/bin/png2raw-12 -K -ta /mnt/onboard/.images/dbrebuild.png
+	/opt/cfw/bin/png2raw -K -ta /mnt/onboard/.images/dbrebuild.png
 fi
 
 if [ -f ${ThemeConfig} ]; then

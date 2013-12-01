@@ -205,10 +205,10 @@ fi
 
 IFS=$saveifs
 
-#if [ "$DebugMode" == "ON" ]; then
-#	cp $SQLCOMFILE /mnt/onboard/sql2.tmp
-#	cp $TMPFILE /mnt/onboard/sqlresult2.tmp
-#fi
+if [ "$DebugMode" == "ON" ]; then
+	cp $SQLCOMFILE /mnt/onboard/sql2.tmp
+	cp $TMPFILE /mnt/onboard/sqlresult2.tmp
+fi
 
 rm -rf $TMPFILE
 rm -rf $SQLCOMFILE
