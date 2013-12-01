@@ -1,0 +1,82 @@
+#!/bin/sh
+
+source /opt/cfw/scripts/common.sh
+
+if [ ! -f ${CONFIG_FILE} ]; then
+	exit 0 
+fi
+
+source $CONFIG_FILE
+
+if [ "$UseDataPatch" == "OFF" ]; then
+	exit 0 
+fi
+
+SQLCOMFILE=`mktemp -t`
+BOOKCOUNT="0"
+NOWBOOKCOUNT="0"
+
+/opt/cfw/scripts/led-blink.sh 4 2
+
+# Check BookCount
+if [ -f ${BOOKINFOFILE} ]; then
+	BOOKCOUNT=`cat $BOOKINFOFILE`
+fi
+
+echo "SELECT COUNT(ContentID) AS BOOKCOUNT " >$SQLCOMFILE
+echo "FROM content " >>$SQLCOMFILE
+echo "WHERE " >>$SQLCOMFILE
+echo "ContentType = 6 AND Accessibility <= 1 AND ___ExpirationStatus <> 3 AND " >>$SQLCOMFILE
+echo "content .___UserID <>'' AND SUBSTR(ContentID,1,18) <> 'file:///usr/local/' AND" >>$SQLCOMFILE
+echo "IFNULL(content.___FileSize,0) > 0; " >>$SQLCOMFILE
+
+cat $SQLCOMFILE | $DBEXE $DBFILE  > $BOOKINFOFILE
+
+NOWBOOKCOUNT=`cat $BOOKINFOFILE`
+
+rm -rf $SQLCOMFILE
+
+if [ $BOOKCOUNT -eq $NOWBOOKCOUNT ]; then
+	if [ "$BookShelfReCreate" == "ON" ]; then
+		/opt/cfw/scripts/createbookshelf.sh
+	fi
+
+	/opt/cfw/scripts/recentlyreading.sh
+
+	/opt/cfw/scripts/led-blink.sh OFF
+	exit 0
+fi
+
+/opt/cfw/scripts/contentupdate.sh
+
+if [ $? -eq 1 ]; then
+	UPDATETARGET="ON"
+else
+	UPDATETARGET="OFF"
+fi
+
+if [ "$StoreBookInsertShelf" != "OFF" -o "$UserBookInsertShelf" != "OFF" -o "$BookShelfReCreate" != "OFF" ]; then
+	/opt/cfw/scripts/createbookshelf.sh
+fi
+
+/opt/cfw/scripts/recentlyreading.sh
+
+/opt/cfw/scripts/led-blink.sh OFF
+
+
+if [ "$UPDATETARGET" == "ON" -a "$ContentScanedReboot" == "ON" ]; then
+	PRODUCT=`/bin/kobo_config.sh`;
+	[ $PRODUCT != trilogy ] && PREFIX=$PRODUCT-
+
+	zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
+
+	if [ -f /mnt/onboard/.images/rebooting.png ]; then
+		/usr/local/Kobo/png2raw-12 -K -ta /mnt/onboard/.images/rebooting.png
+	else
+		zcat /etc/images/$PREFIX\reboot.raw.gz | /usr/local/Kobo/pickel showpic
+	fi
+
+	sync
+	sleep 1;
+	reboot
+fi
