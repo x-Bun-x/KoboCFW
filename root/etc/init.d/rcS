@@ -45,10 +45,17 @@ rm -rf /etc/udev/rules.d/70-persistent-net.rules
 
 echo -e '\000\000\000\000' > /proc/sys/kernel/hotplug
 /sbin/udevd -d
-/sbin/udevadm control --env=STARTUP=1
-/sbin/udevadm trigger
-/sbin/udevadm settle --timeout=2
-/sbin/udevadm control --env=STARTUP=
+
+if [ $PLATFORM == freescale ] || [ ! -e /etc/udev.tgz ]; then
+	/sbin/udevadm control --env=STARTUP=1
+	/sbin/udevadm trigger
+	/sbin/udevadm settle --timeout=2
+	/sbin/udevadm control --env=STARTUP=
+	[ $PLATFORM != freescale ] && tar cpzf /etc/udev.tgz /dev &
+else
+	zcat /etc/udev.tgz > /dev/null || ( rm -rf /etc/udev.tgz; reboot )
+	tar zxf /etc/udev.tgz -C /
+fi
 
 ( usleep 400000; /etc/init.d/on-animator.sh ) &
 
@@ -129,10 +136,5 @@ export UBOOT_RECOVERY=/etc/u-boot/$PLATFORM/u-boot.recovery
 export DBUS_SESSION_BUS_ADDRESS=`/bin/dbus-daemon --session --print-address --fork`
 
 /usr/local/Kobo/hindenburg &
-/usr/local/Kobo/nickel -qws &
-
-(
-	if [ -e /dev/mmcblk1p1 ]; then
-		ACTION=add DEVNAME=/dev/mmcblk1p1 /usr/local/Kobo/udev/sd
-	fi
-) &
+/usr/local/Kobo/nickel -qws -skipFontLoad &
+[ $PLATFORM != freescale ] && udevadm trigger &
