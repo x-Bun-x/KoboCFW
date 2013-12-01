@@ -31,11 +31,12 @@ if [ $MODULE_LOADED -gt 0 ]; then
 fi
 
 DEV="/dev/mmcblk1p1"
+MOUNTARGS="noatime,nodiratime,shortname=mixed,utf8"
 
 if [ "$DEV" == "$DEVNAME" ]; then
 	if [ "$ACTION" == "add" ]; then
 		dosfsck -a -w $DEVNAME
-		mount -r -t vfat -o shortname=mixed $DEVNAME /mnt/sd
+		mount -r -t vfat -o $MOUNTARGS $DEVNAME /mnt/sd
 		if [ $? != 0 ]; then
 #			mount -r $DEVNAME /mnt/sd
 #			if [ $? != 0 ]; then

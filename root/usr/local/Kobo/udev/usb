@@ -58,14 +58,14 @@ elif [ "$ACTION" == "remove" ]; then
 
 	if [ -e /drivers/$PLATFORM ]; then
 		PARTITION=/dev/mmcblk0p3
-		MOUNTARGS="noatime,nodiratime,iocharset=utf8"
+		MOUNTARGS="noatime,nodiratime,shortname=mixed,utf8"
 	fi
 
 	dosfsck -a -w $PARTITION
 	mount -o $MOUNTARGS -t vfat $PARTITION /mnt/onboard
 
 	if [ -e $DEV ]; then
-		mount -r -t vfat -o shortname=mixed $DEV /mnt/sd
+		mount -r -t vfat -o $MOUNTARGS $DEV /mnt/sd
 #		if [ $? != 0 ]; then
 #			mount -r $DEV /mnt/sd
 #		fi
@@ -120,7 +120,7 @@ elif [ "$ACTION" == "remove" ]; then
 		export WIFI_MODULE
 		export WIFI_MODULE_PATH=/drivers/$PLATFORM/wifi/$WIFI_MODULE.ko
 
-		/usr/local/Kobo/nickel -qws &
+		/usr/local/Kobo/nickel -qws -skipFontLoad &
 
 		killall update-animator.sh
 		rmmod $WIFI_MODULE;
