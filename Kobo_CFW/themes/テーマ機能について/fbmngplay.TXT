@@ -1,0 +1,116 @@
+
+[fbmngplay]
+
+Kobo内蔵のlibmngを使用するバージョンのみ。
+
+描画完了待ちと画面復帰関連を適当に実装。
+
+usage: fbmngplay [ -x <val> ] [ -y <val> ] [ -a <val> ] [ -d <val> ] [ -c <val> ]
+                 [-b] [-v] [-s] [-S] [-p] [-D] [-w] [-W] [-r <method>]
+                 [<file.mng> [<file.mng> [...]]]
+
+	-x, --x: offset x coordinate (default: 0)
+	-y, --y: offset y coordinate (default: 0)
+	-p, --position: dynamically select position
+		画面サイズよりも小さいmngの表示位置
+
+	-a, --alpha: default alpha channel [1,100] (default: 100)
+		fbmngplay開始前の元画面とmngファイル画像のブレンド率
+	-d, --delta: duration of fade-out alpha value [1,100] (default: 16)
+		終了時のフェードアウト効果
+		フェードアウトは表示のブレンド率alpha%から始まり、
+		delta%づつ減っていき、0%になったところで終わる。
+		delta=100にすると、フェードアウトはほぼ発生しない(はず)
+		** SIGINTによる終了の場合はフェードアウトあり
+		** SIGTERMの場合はフェードアウトなし
+
+	-b, --buffered: buffered mode
+		mngファイルを全てメモリに読み込んで表示する
+
+	-s, --signal: wait for SIGUSR1 between animations
+		複数ファイルを指定した場合のみ有効。
+		各mngファイルの表示が終わった後、
+		次mngの表示に移るためのトリガーとしてSIGUSR1を待つ。
+		未指定の場合はあるmngファイルが終わったら即次mngファイルに移る。
+		** loopするmngの場合、SIGINTが1ファイルの終了。
+		** (→フェードアウトしながらそのmngファイル表示を終了する)
+
+	-S, --start-console: only output animation on console it was started on.
+	-c, --console: set start console number
+		元コードにあっただけで使い道はあまりないのでノーコメント
+
+	-W, --wait-for-each-update-complete: wait completion of each parts
+		mng内部の描画単位毎に実画面更新完了を待つ
+	-w, --wait-for-final-update-complete: wait completion before exit
+		全mng表示完了時に実画面更新完了を待つ
+		** 下記restore-screen処理の前のタイミングで描画完了待ちを行う
+
+	-r, --restore-screen: restore scrren method befor exit
+	                      method:
+	                             none: keep last played screen (default)
+	                             restore: restore original screen
+	                             <color-value>: fill screen with <color-value>
+	                                  black: (alias name) <color-value>=0x0000
+	                                  white: (alias name) <color-value>=0xffff
+		全表示完了(fbmngplay終了)時に画面をどう戻すかを指定
+		none:
+			最後に表示した状態の画面を維持する
+		restore:
+			fbmngplay開始前の画面に戻す
+		<color-value>:
+			<color-value>で指定したカラー値で画面を塗りつぶす
+			RGB565モードのカラー値を十進or十六進数値で直接指定する
+			black,whiteはエイリアス
+		** none以外の場合、画面復帰描画処理は常にその描画完了待ちを行う
+
+	-D, --debug: show debug message
+	-V, --version: show version and exit
+	-v, --verbose: verbose mode
+	-?, -h, --help: print this help.
+
+フェードアウトがうざい場合は
+	fbmngplay -d 100 foo.mng
+を指定すれば、一気に-100%してフェードアウト効果が実質無効になる。
+
+コマンド終了直前に少し遅れて画面更新がされるのが気持ち悪い場合は
+	fbmngplay -w foo.mng
+で、最終描画のタイミングで完了待ちを入れる。
+
+コマンド終了後に元画面に戻る必要がなく特定色で画面クリアするなら
+	fbmngplay -rblack foo.mng
+	fbmngplay -r0x0000 foo.mng
+等で指定する。
+
+大体"-d 100 -w"あたりを指定しておけば変なフェードアウトなしで、
+比較的きっちりと終わるはず。
+画面復帰は後続処理の画面との兼ね合いでお好み。
+
+##########################################################################
+[png2raw]
+
+Kobo内蔵のlibpng-1.2を使用するバージョンのみ。
+
+内部の構造をいじっているだけで、raw2png機能追加はまだ。
+fbmngplayをいじるついでに少し構造を整理中。
+
+Usage: png2raw [options] <png-file> [<raw-file>]
+Options:
+	-K    --kobo         output to /dev/fb0
+	-P    --partial      [/dev/fb0 device function] update partial
+	-F    --full         [/dev/fb0 device function] update full
+	-R    --reverse      [/dev/fb0 device function] update invert
+	-t[N] --transpose=N  N=[0-3] or a
+	                      a: auto
+	                      0: none
+	                      1, 90:
+	                      2, 180:
+	                      3, 270, -90:
+
+	-v | --verbpse       verbose
+	-h | -? --help       print this help
+
+
+ln -s png2raw png2fb
+とかしてやると、
+png2fbはデフォルトで"-K"指定した状態のコマンドになる。
+
