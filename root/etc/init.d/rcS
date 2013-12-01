@@ -31,9 +31,14 @@ done;
 /bin/mount -t proc  none  /proc
 /bin/mount -t tmpfs none -o size=16m /tmp
 /bin/mount -t tmpfs none /dev
+/bin/mount -t tmpfs none -o size=16k /var/lib
 /bin/mount -t tmpfs none -o size=16k /var/log
 /bin/mount -t tmpfs none -o size=128k /var/run
 /bin/mount -t sysfs none -o size=500k /sys
+
+for i in /var/run/dbus /var/lib/dbus; do
+	mkdir -p $i
+done
 
 mkfifo /tmp/nickel-hardware-status
 rm -rf /etc/udev/rules.d/70-persistent-net.rules
@@ -117,6 +122,10 @@ export WIFI_MODULE_PATH=/drivers/$PLATFORM/wifi/$WIFI_MODULE.ko
 export LANG=en_US.UTF-8
 export UBOOT_MMC=/etc/u-boot/$PLATFORM/u-boot.mmc
 export UBOOT_RECOVERY=/etc/u-boot/$PLATFORM/u-boot.recovery
+
+/bin/dbus-uuidgen > /var/lib/dbus/machine-id
+/bin/dbus-daemon --system &
+export DBUS_SESSION_BUS_ADDRESS=`/bin/dbus-daemon --session --print-address --fork`
 
 /usr/local/Kobo/hindenburg &
 /usr/local/Kobo/nickel -qws &
