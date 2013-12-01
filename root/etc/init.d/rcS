@@ -147,8 +147,6 @@ export UBOOT_RECOVERY=/etc/u-boot/$PLATFORM/u-boot.recovery
 /bin/dbus-daemon --system &
 export DBUS_SESSION_BUS_ADDRESS=`/bin/dbus-daemon --session --print-address --fork`
 
-/usr/local/Kobo/hindenburg &
-
 source /etc/init.d/rcSAdd
 ADD=
 ADD2=
@@ -167,6 +165,8 @@ if [ ! -e /mnt/onboard/nickel-failed ]; then
 fi
 
 # Boot Nickel
+/usr/local/Kobo/hindenburg &
+
 (
 	LD_PRELOAD="`echo /opt/cfw/preload/*.so` $ADD $ADD2" /usr/local/Kobo/nickel -qws -skipFontLoad
 	echo 100 >/sys/class/leds/pmic_ledsr/brightness
