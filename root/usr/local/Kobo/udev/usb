@@ -1,0 +1,87 @@
+#!/bin/sh
+
+PRODUCT=`/bin/kobo_config.sh`;
+[ $PRODUCT != trilogy ] && PREFIX=$PRODUCT-
+
+MODULE_LOADED=`lsmod | grep -c g_file_storage`
+
+PLATFORM=freescale
+VENDOR_ID=0x2237
+INTERFACE=wlan0
+WIFI_MODULE=ar6000
+
+if [ `dd if=/dev/mmcblk0 bs=512 skip=1024 count=1 | grep -c "HW CONFIG"` == 1 ]; then
+	if [ -e /drivers/ntx508 ]; then
+		PLATFORM=ntx508
+		INTERFACE=eth0
+		WIFI_MODULE=dhd
+	fi
+fi
+
+DEV="/dev/mmcblk1p1"
+if [ -e /dev/mmcblk1p1 ]; then
+	LUNS=/dev/mmcblk0p3,/dev/mmcblk1p1
+else
+	LUNS=/dev/mmcblk0p3
+fi
+
+PARAMS="vendor=$VENDOR_ID product=$PRODUCT_ID vendor_id=Kobo product_id=eReader-$VERSION SN=$SN"
+
+if [ "$ACTION" == "add" ]; then
+	/opt/cfw/scripts/ChangeJournalMode.sh OFF
+	/mnt/onboard/ext/mount_usb.sh
+	wait
+
+	sync
+	umount -l /mnt/onboard
+	umount -l /mnt/sd
+
+	/sbin/insmod /drivers/$PLATFORM/usb/gadget/arcotg_udc.ko
+	sleep 2
+
+	/sbin/insmod /drivers/$PLATFORM/usb/gadget/g_file_storage.ko file=$LUNS stall=1 removable=1 $PARAMS
+	sleep 1
+
+elif [ "$ACTION" == "remove" ]; then
+	if [ $MODULE_LOADED -eq 0 ]; then
+		exit
+	fi
+
+	/sbin/rmmod g_file_storage
+	/sbin/rmmod arcotg_udc
+	sleep 1
+
+	if [ -e /drivers/$PLATFORM ]; then
+		PARTITION=/dev/mmcblk0p3
+		MOUNTARGS="noatime,nodiratime,shortname=mixed,utf8"
+	fi
+
+	dosfsck -a -w $PARTITION
+	mount -o $MOUNTARGS -t vfat $PARTITION /mnt/onboard
+
+	if [ -e $DEV ]; then
+		mount -r -t vfat -o $MOUNTARGS $DEV /mnt/sd
+	fi
+
+	/opt/cfw/scripts/ReplaceFile.sh
+	/opt/cfw/scripts/ChangeJournalMode.sh ON
+
+	rm -rf /etc/images/boot/boot.mng
+	cp /mnt/onboard/.images/boot.mng /etc/images/boot
+
+	rm -rf /opt/cfw/themes.conf
+	cp mnt/onboard/.images/themes.conf /opt/cfw/
+
+
+	( sleep 1
+		rm -rf /mnt/onboard/fsck*
+		rm -rf /mnt/onboard/FSCK*
+	) &
+
+
+	source /opt/cfw/scripts/common.sh
+
+	if [ -f ${CONFIG_FILE} ]; then
+		/mnt/onboard/ext/umount_usb.sh
+	fi
+fi
