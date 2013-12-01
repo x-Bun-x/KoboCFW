@@ -1,0 +1,19 @@
+#!/bin/sh
+source /opt/cfw/scripts/common.sh
+
+if [ ! -f ${CONFIG_FILE} ]; then
+	exit 0 
+fi
+
+/mnt/onboard/ext/suspend_start.sh
+
+if [ -f /mnt/onboard/.images/suspend.png ]; then
+	PRODUCT=`/bin/kobo_config.sh`;
+	[ $PRODUCT != trilogy ] && PREFIX=$PRODUCT-
+
+	zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
+
+	/opt/cfw/bin/png2raw-12 -K -ta /mnt/onboard/.images/suspend.png
+
+	/mnt/onboard/ext/suspend.sh
+fi

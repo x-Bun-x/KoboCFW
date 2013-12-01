@@ -35,7 +35,7 @@ DEV="/dev/mmcblk1p1"
 if [ "$DEV" == "$DEVNAME" ]; then
 	if [ "$ACTION" == "add" ]; then
 		dosfsck -a -w $DEVNAME
-		mount -r -t vfat -o shortname=mixed $DEVNAME /mnt/sd
+		mount -r -t vfat -o iocharset=utf8,shortname=mixed $DEVNAME /mnt/sd
 		if [ $? != 0 ]; then
 #			mount -r $DEVNAME /mnt/sd
 #			if [ $? != 0 ]; then
@@ -44,6 +44,8 @@ if [ "$DEV" == "$DEVNAME" ]; then
 #				echo sd $ACTION $DEVNAME >> /tmp/nickel-hardware-status &
 #			fi
 		else
+			/opt/cfw/scripts/ReplaceFileSD.sh
+			/mnt/onboard/ext/mount_sd.sh
 			echo sd $ACTION $DEVNAME >> /tmp/nickel-hardware-status &
 		fi
 	fi
