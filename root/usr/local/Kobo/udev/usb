@@ -90,8 +90,7 @@ elif [ "$ACTION" == "remove" ]; then
 			rm -rf /mnt/onboard/.kobo/upgrade
 		fi
 		killall update-animator.sh
-		zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
-		zcat /etc/images/$PREFIX\reboot.raw.gz | /usr/local/Kobo/pickel showpic
+		zcat /etc/images/$PREFIX\reboot.raw.gz | /usr/local/Kobo/pickel showpic 1
 		sync
 		sleep 1;
 		reboot

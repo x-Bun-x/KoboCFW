@@ -59,6 +59,7 @@ rm -rf /mnt/onboard/FSCK*
 rm -rf /usr/local/Kobo/db.tgz
 
 echo -n 8192 > /proc/sys/vm/min_free_kbytes
+echo -n 67108864 > /proc/sys/kernel/shmmax
 
 if [ ! -e /mnt/onboard/.kobo ]; then
 	mkdir -p /mnt/onboard/.kobo
