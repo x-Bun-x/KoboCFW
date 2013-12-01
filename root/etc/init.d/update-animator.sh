@@ -7,7 +7,7 @@ PRODUCT=`/bin/kobo_config.sh`;
 [ $PRODUCT != trilogy ] && PREFIX=$PRODUCT-
 
 if [ -f /mnt/onboard/.images/update.png ]; then
-	/opt/cfw/bin/png2raw-12 -K -ta /mnt/onboard/.images/update.png
+	/opt/cfw/bin/png2raw -K -ta /mnt/onboard/.images/update.png
 fi
 
 if [ -f ${MNG_FILE} ]; then

@@ -76,7 +76,8 @@ if [ "$FontSettingUpdate" != "OFF" -a "$FontSettingTemplate" != "" ]; then
 	echo "        content_settings.ReadingLeftMargin,  " >>$SQLCOMFILE2
 	echo "        content_settings.ReadingRightMargin,  " >>$SQLCOMFILE2
 	echo "        content_settings.ReadingPublisherMode,  " >>$SQLCOMFILE2
-	echo "        content_settings.ActivityFacebookShare " >>$SQLCOMFILE2
+	echo "        content_settings.ActivityFacebookShare, " >>$SQLCOMFILE2
+	echo "        content_settings.RecentBookSearches " >>$SQLCOMFILE2
 	echo "    FROM " >>$SQLCOMFILE2
 	echo "        content_settings " >>$SQLCOMFILE2
 	echo "    INNER JOIN content ON " >>$SQLCOMFILE2
@@ -108,12 +109,12 @@ if [ "$FontSettingUpdate" != "OFF" -a "$FontSettingTemplate" != "" ]; then
 
 	cat $SQLCOMFILE2 | $DBEXE $DBFILE >$TMPFILE
 
-	cat $TMPFILE | while read contentid contenttype nowdate ReadingFontFamily ReadingFontSize ReadingAlignment ReadingLineHeight ReadingLeftMargin ReadingRightMargin ReadingPublisherMode ActivityFacebookShare;
+	cat $TMPFILE | while read contentid contenttype nowdate ReadingFontFamily ReadingFontSize ReadingAlignment ReadingLineHeight ReadingLeftMargin ReadingRightMargin ReadingPublisherMode ActivityFacebookShare RecentBookSearches;
 	do
 		echo "INSERT INTO content_settings " >>$SQLCOMFILE
 		echo "SELECT '$contentid','$contenttype','$nowdate','$ReadingFontFamily','$ReadingFontSize'," >>$SQLCOMFILE
 		echo "    '$ReadingAlignment','$ReadingLineHeight','$ReadingLeftMargin','$ReadingRightMargin'," >>$SQLCOMFILE
-		echo "    '$ReadingPublisherMode','$ActivityFacebookShare';" >>$SQLCOMFILE
+		echo "    '$ReadingPublisherMode','$ActivityFacebookShare','$RecentBookSearches';" >>$SQLCOMFILE
 	done
 fi
 
