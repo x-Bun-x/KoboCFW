@@ -48,6 +48,7 @@ rm -rf /mnt/onboard/*
 echo -e '\000\000\000\000' > /proc/sys/kernel/hotplug
 /sbin/udevd -d
 
+[ "$(ls -s /etc/udev.tgz | awk '{print $1}')" == 0 ] && rm -rf /etc/udev.tgz
 if [ $PLATFORM == freescale ] || [ ! -e /etc/udev.tgz ]; then
 	/sbin/udevadm control --env=STARTUP=1
 	/sbin/udevadm trigger
@@ -59,6 +60,30 @@ else
 	tar zxf /etc/udev.tgz -C /
 fi
 
+export UBOOT_MMC=/etc/u-boot/$PLATFORM/u-boot.mmc
+export UBOOT_RECOVERY=/etc/u-boot/$PLATFORM/u-boot.recovery
+
+/usr/local/Kobo/pickel should-factory-reset
+if [ $? == 1 ]; then
+	case $PRODUCT in
+		kraken|phoenix)
+			export COORDINATES="80 870 70 70 200 870 70 70";;
+		dragon)
+			export COORDINATES="120 1220 100 100 280 1220 100 100";;
+		*)
+			export COORDINATES="55 685 60 60 150 685 60 60";;
+		
+	esac
+	sleep 5
+	zcat /etc/images/$PREFIX\factory-reset.raw.gz | /usr/local/Kobo/pickel showpic
+	/usr/local/Kobo/pickel wait-for-hit $COORDINATES
+	if [ $? == 2 ]; then
+		dd if=$UBOOT_RECOVERY of=/dev/mmcblk0 bs=128k count=1 seek=6
+		sync
+	fi
+	reboot
+fi
+
 dosfsck -a -w /dev/mmcblk0p3
 mount -t vfat -o noatime,nodiratime,shortname=mixed,utf8 /dev/mmcblk0p3 /mnt/onboard
 rm -rf /mnt/onboard/fsck*
@@ -68,20 +93,23 @@ rm -rf /usr/local/Kobo/db.tgz
 echo -n 8192 > /proc/sys/vm/min_free_kbytes
 echo -n 67108864 > /proc/sys/kernel/shmmax
 
+/usr/local/Kobo/pickel can-upgrade
+CAN_UPGRADE=$?
+
 if [ ! -e /mnt/onboard/.kobo ]; then
 	mkdir -p /mnt/onboard/.kobo
 fi
 
-if [ -e /mnt/onboard/.kobo/Kobo.tgz ]; then
-	zcat /mnt/onboard/.kobo/Kobo.tgz > /dev/null && tar zxf /mnt/onboard/.kobo/Kobo.tgz -C /usr/local/Kobo/
+if [ $CAN_UPGRADE == 1 ] && [ -e /mnt/onboard/.kobo/Kobo.tgz ]; then
+	zcat /mnt/onboard/.kobo/Kobo.tgz > /dev/null && tar zxf /mnt/onboard/.kobo/Kobo.tgz -C /usr/local/Kobo/ && ( cat /usr/local/Kobo/revinfo >> /usr/local/Kobo/install.log )
 	rm /mnt/onboard/.kobo/Kobo.tgz
 	echo "Done upgrading..."
 fi
                                
-if [ -e /mnt/onboard/.kobo/KoboRoot.tgz ]; then
+if [ $CAN_UPGRADE == 1 ] && [ -e /mnt/onboard/.kobo/KoboRoot.tgz ]; then
 	zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
 	/etc/init.d/update-animator.sh &
-	zcat /mnt/onboard/.kobo/KoboRoot.tgz > /dev/null && tar zxf /mnt/onboard/.kobo/KoboRoot.tgz -C /
+	zcat /mnt/onboard/.kobo/KoboRoot.tgz > /dev/null && tar zxf /mnt/onboard/.kobo/KoboRoot.tgz -C / && ( cat /usr/local/Kobo/revinfo >> /usr/local/Kobo/install.log )
 	if [ -e /mnt/onboard/.kobo/upgrade ]; then
 		/etc/init.d/upgrade-wifi.sh
 		rm -rf /mnt/onboard/.kobo/upgrade
@@ -126,8 +154,6 @@ export NICKEL_HOME=/mnt/onboard/.kobo
 export LD_LIBRARY_PATH=/usr/local/Kobo
 export WIFI_MODULE_PATH=/drivers/$PLATFORM/wifi/$WIFI_MODULE.ko
 export LANG=en_US.UTF-8
-export UBOOT_MMC=/etc/u-boot/$PLATFORM/u-boot.mmc
-export UBOOT_RECOVERY=/etc/u-boot/$PLATFORM/u-boot.recovery
 
 /bin/dbus-uuidgen > /var/lib/dbus/machine-id
 /bin/dbus-daemon --system &
