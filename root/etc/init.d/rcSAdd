@@ -1,0 +1,108 @@
+source /opt/cfw/scripts/common.sh
+
+if [ -f ${CONFIG_FILE} ]; then
+	source $CONFIG_FILE
+
+	MARK_FILE="/tmp/sqltuned.tmp"
+	PRODUCT=`/bin/kobo_config.sh`;
+	[ $PRODUCT != trilogy ] && PREFIX=$PRODUCT-
+
+	if [ ! -f ${MARK_FILE} ]; then
+		$DBEXE $DBFILE 'CREATE INDEX idx_ctm_content_VolumeIndex ON content (VolumeIndex)'
+		$DBEXE $DBFILE 'CREATE INDEX idx_ctm_volshcov_VolumeIndex ON volume_shortcovers (VolumeIndex)'
+		echo "Database Tuned Done" > $MARK_FILE
+	fi
+
+	if [ "$DBCacheSize" == "MAX" ]; then
+		$DBEXE $DBFILE "PRAGMA default_cache_size=65534;"
+	elif [ "$DBCacheSize" == "DEFAULT" ]; then
+		$DBEXE $DBFILE "PRAGMA default_cache_size=2000;"
+	elif [ "$DBCacheSize" != "" ]; then
+		expect_empty=`echo -n $DBCacheSize | sed 's/[0-9]//g' `
+
+		if [ -n "$expect_empty" ]; then
+			$DBEXE $DBFILE "PRAGMA default_cache_size=2000;"
+		else
+			if [ "$DBCacheSize" -gt 65534 ]; then
+				$DBEXE $DBFILE "PRAGMA default_cache_size=65534;"
+			elif [ "$DBCacheSize" -lt 2000 ]; then
+				$DBEXE $DBFILE "PRAGMA default_cache_size=2000;"
+			else
+				$DBEXE $DBFILE "PRAGMA default_cache_size=${DBCacheSize};"
+			fi
+		fi
+	else
+		$DBEXE $DBFILE "PRAGMA default_cache_size=2000;"
+	fi
+
+	cat /opt/cfw/scripts/Trigger_Drop.sql | $DBEXE $DBFILE
+
+	if [ "$UseDataPatch" == "ON" ]; then
+		IsClear="ON"
+		IsAnime="Enable"
+
+		if [ -f ${ThemeConfig} ]; then
+			source $ThemeConfig
+
+			IsClear=$ClearDisplayDbUpdate
+			IsAnime=$DisplayDbUpdateAnime
+		fi
+
+		if [ "$IsAnime" != "Disable" ]; then
+			killall on-animator.sh
+
+			if [ "$IsClear" == "ON" ]; then
+				zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
+			fi
+
+			/etc/init.d/dbupdate-animator.sh &
+		fi
+
+		if [ "$RecentlyReadingBookshelf" == "ON" ]; then
+			/opt/cfw/scripts/Trigger_Create.sh
+		fi
+
+		/opt/cfw/scripts/boot_contentupdate.sh
+
+		if [ "$IsAnime" != "Disable" ]; then
+			killall dbupdate-animator.sh
+
+			if [ "$IsClear" == "ON" ]; then
+				zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
+			fi
+
+			if [ "$DataBaseOptimization" == "OFF" ]; then
+				/etc/init.d/on-animator.sh &
+			fi
+		fi
+	fi
+
+	if [ "$DataBaseOptimization" == "ON" ]; then
+		IsClear="ON"
+
+		killall on-animator.sh
+
+		if [ -f ${ThemeConfig} ]; then
+			source $ThemeConfig
+
+			IsClear=$ClearDisplayDbRebuild
+		fi
+
+		if [ "$IsClear" == "ON" ]; then
+			zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
+		fi
+
+		/etc/init.d/rebuild-animator.sh &
+
+		/opt/cfw/scripts/dbOptimize.sh
+
+		killall rebuild-animator.sh
+
+		if [ "$IsClear" == "ON" ]; then
+			zcat /etc/images/$PREFIX\ghostbuster.raw.gz | /usr/local/Kobo/pickel showpic
+		fi
+
+		/etc/init.d/on-animator.sh &
+	fi
+	/mnt/onboard/ext/boot.sh
+fi
